@@ -25,21 +25,9 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
-    TextView myLabel;
-    EditText myTextbox;
-    BluetoothAdapter mBluetoothAdapter;
-    BluetoothSocket mmSocket;
-    BluetoothDevice mmDevice;
-    OutputStream mmOutputStream;
-    InputStream mmInputStream;
-    Thread workerThread;
-    byte[] readBuffer;
-    int readBufferPosition;
-    int counter;
-    volatile boolean stopWorker;
-    String data;
-
     private PaintView paintView;
+    BluetoothAdapter mBluetoothAdapter;
+    static Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
         paintView.init(metrics);
+        mHandler = paintView.mHandler;
         /*
         paintView.touchStart(1120, 730);
         paintView.touchMove(1120, 450);
@@ -78,31 +67,21 @@ public class MainActivity extends AppCompatActivity {
                 paintView.clear();
                 return true;
             case R.id.find:
-                try {
-                    findBT();
-                    openBT();
-                }
-                catch (IOException ex) { }
-
+                startBT();
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    void findBT()
-    {
+    public void startBT(){
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(mBluetoothAdapter == null)
-        {
-            Log.d("BT", "No bluetooth adapter available");
+        if(!mBluetoothAdapter.isEnabled()) {
+            Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(intent, 1);
         }
 
-        if(!mBluetoothAdapter.isEnabled())
-        {
-            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBluetooth, 0);
-        }
-
+        BluetoothDevice selectedDevice = null;
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
         if(pairedDevices.size() > 0)
         {
@@ -110,84 +89,98 @@ public class MainActivity extends AppCompatActivity {
             {
                 if(device.getName().equals("HC-06"))
                 {
-                    mmDevice = device;
+                    Log.d("DEBUG", "found");
+                    selectedDevice = device;
                     break;
                 }
             }
         }
-        Log.d("BT", "Bluetooth Device Found");
+        if(selectedDevice == null)
+            return;
+
+        BluetoothSocket mmSocket = null;
+        try{
+            UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+            mmSocket = selectedDevice.createRfcommSocketToServiceRecord(uuid);
+
+            mBluetoothAdapter.cancelDiscovery();
+            try{
+                mmSocket.connect();
+                Log.d("DEBUG", "connected");
+            } catch (IOException connectException){
+                try {
+                    mmSocket.close();
+                } catch (IOException closeException){}
+            }
+        } catch (IOException e) {}
+
+        ConnectedThread cThread = new ConnectedThread(mmSocket);
+        cThread.start();
     }
 
-    void openBT() throws IOException
-    {
-        UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
-        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
-        mmSocket.connect();
-        mmOutputStream = mmSocket.getOutputStream();
-        mmInputStream = mmSocket.getInputStream();
-        paintView.start(mmInputStream);
-        //beginListenForData();
+    static class ConnectedThread extends Thread{
+        private final BluetoothSocket mmSocket;
+        private final InputStream mmInStream;
+        private final OutputStream mmOutStream;
 
-        Log.d("BT", "Bluetooth Opened");
-    }
+        public ConnectedThread(BluetoothSocket socket){
+            mmSocket = socket;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
 
-    void beginListenForData()
-    {
-        final Handler handler = new Handler();
-        final byte delimiter = 10; //This is the ASCII code for a newline character
+            try {
+                tmpIn = socket.getInputStream();
+                tmpOut = socket.getOutputStream();
+            } catch (IOException e){}
 
-        stopWorker = false;
-        readBufferPosition = 0;
-        readBuffer = new byte[1024];
-        workerThread = new Thread(new Runnable()
-        {
-            public void run()
-            {
-                while(!Thread.currentThread().isInterrupted() && !stopWorker)
-                {
-                    try
-                    {
-                        int bytesAvailable = mmInputStream.available();
-                        if(bytesAvailable > 0)
-                        {
-                            byte[] packetBytes = new byte[bytesAvailable];
-                            mmInputStream.read(packetBytes);
-                            for(int i=0;i<bytesAvailable;i++)
-                            {
-                                byte b = packetBytes[i];
-                                if(b == delimiter)
-                                {
-                                    byte[] encodedBytes = new byte[readBufferPosition];
-                                    System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
-                                    data = new String(encodedBytes, "US-ASCII");
-                                    readBufferPosition = 0;
+            mmInStream = tmpIn;
+            mmOutStream = tmpOut;
+        }
 
-                                    handler.post(new Runnable()
-                                    {
-                                        public void run()
-                                        {
-                                            Log.d("BT", data);
-                                            data = data.replace("\n", "").replace("\r", "");
-                                            String[] dis_array = data.split("\t");
-                                            paintView.draw(Math.round(Float.parseFloat(dis_array[0])), Math.round(Float.parseFloat(dis_array[1])), Math.round(Float.parseFloat(dis_array[2])));
-                                        }
-                                    });
-                                }
-                                else
-                                {
-                                    readBuffer[readBufferPosition++] = b;
-                                }
-                            }
-                        }
-                    }
-                    catch (IOException ex)
-                    {
-                        stopWorker = true;
-                    }
+        StringBuffer sbb = new StringBuffer();
+
+        public void run(){
+            byte[] buffer;
+            int bytes;
+
+            while(true){
+                try{
+                    buffer = new byte[1024];
+                    bytes = mmInStream.read(buffer);
+                    mHandler.obtainMessage(0, bytes, -1, buffer).sendToTarget();
+                } catch(IOException e){
+                    break;
                 }
             }
-        });
-
-        workerThread.start();
+        }
     }
+
+    private class ConnectThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        private final BluetoothDevice mmDevice;
+
+        public ConnectThread(BluetoothDevice device){
+            BluetoothSocket tmp = null;
+            mmDevice = device;
+
+            try{
+                UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+                tmp = device.createRfcommSocketToServiceRecord(uuid);
+            } catch (IOException e) {}
+            mmSocket = tmp;
+        }
+
+        public void run(){
+            mBluetoothAdapter.cancelDiscovery();
+            try{
+                mmSocket.connect();
+            } catch (IOException connectException){
+                try {
+                    mmSocket.close();
+                } catch (IOException closeException){}
+            }
+            return;
+        }
+    }
+
 }

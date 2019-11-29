@@ -13,6 +13,7 @@ import android.graphics.MaskFilter;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.os.Handler;
+import android.os.Message;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -89,6 +90,18 @@ public class PaintView extends View {
         mBlur = new BlurMaskFilter(5, BlurMaskFilter.Blur.NORMAL);
     }
 
+    public Handler mHandler = new Handler(){
+        @Override
+        public void handleMessage(Message msg){
+            super.handleMessage(msg);
+            //int x = msg.arg1;
+            //int y= msg.arg2;
+            byte[] readBuf = (byte[])msg.obj;
+            String strIncom = new String(readBuf, 0, 7);
+            //mCanvas.drawCircle(x, y, 10, mPaint);
+        }
+    };
+
     public void init(DisplayMetrics metrics) {
         int height = metrics.heightPixels;
         int width = metrics.widthPixels;
@@ -102,68 +115,10 @@ public class PaintView extends View {
         sensitivity = 3;
     }
 
-    public void start(InputStream i_stream){
-        this.mmInputStream = i_stream;
-        final Handler handler = new Handler();
-        final byte delimiter = 10; //This is the ASCII code for a newline character
-
-        stopWorker = false;
-        readBufferPosition = 0;
-        readBuffer = new byte[1024];
-
-        workerThread = new Thread(new Runnable()
-        {
-            public void run()
-            {
-                while(!Thread.currentThread().isInterrupted() && !stopWorker)
-                {
-                    try
-                    {
-                        int bytesAvailable = mmInputStream.available();
-                        if(bytesAvailable > 0)
-                        {
-                            byte[] packetBytes = new byte[bytesAvailable];
-                            mmInputStream.read(packetBytes);
-                            for(int i=0;i<bytesAvailable;i++)
-                            {
-                                byte b = packetBytes[i];
-                                if(b == delimiter)
-                                {
-                                    byte[] encodedBytes = new byte[readBufferPosition];
-                                    System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
-                                    final String data = new String(encodedBytes, "US-ASCII");
-                                    readBufferPosition = 0;
-
-                                    handler.post(new Runnable()
-                                    {
-                                        public void run()
-                                        {
-                                            Log.d("BT", data);
-                                            //data = data.replace("\n", "").replace("\r", "");
-                                            //String[] dis_array = data.split("\t");
-                                            //paintView.draw(Math.round(Float.parseFloat(dis_array[0])), Math.round(Float.parseFloat(dis_array[1])), Math.round(Float.parseFloat(dis_array[2])));
-                                        }
-                                    });
-                                }
-                                else
-                                {
-                                    readBuffer[readBufferPosition++] = b;
-                                }
-                            }
-                        }
-                    }
-                    catch (IOException ex)
-                    {
-                        stopWorker = true;
-                    }
-                }
-            }
-        });
-
-        workerThread.start();
-    }
 
     public void draw(int x, int y, int z){
+        Log.d("New BT", Integer.toString(x));
+        this.Calibrated = true;
         if(!this.Calibrated){
             Log.d("DRAW", "Calibrating...");
             int disx = 1000;
@@ -204,6 +159,9 @@ public class PaintView extends View {
                 }
             }
         }
+        Log.d("New BT", Integer.toString(x));
+        mCanvas.drawCircle(x, y, 10, mPaint);
+        /*
         if(x == 0 || y == 0 || z == 0)
             return;
         int corx = x - this.initx;
@@ -213,11 +171,15 @@ public class PaintView extends View {
 
         if(Math.abs(diffx) > 30 || Math.abs(diffy) > 30)
             return;
+
+
         diffy = diffy * (-1);
 
         int drawx = this.startx + (corx * this.sensitivity);
         int drawy = this.starty + (cory * this.sensitivity);
         mCanvas.drawCircle(drawx, drawy, 10, mPaint);
+
+         */
     }
 
     public void normal() {
