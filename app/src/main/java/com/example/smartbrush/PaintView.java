@@ -70,6 +70,8 @@ public class PaintView extends View {
     int counter;
     volatile boolean stopWorker;
 
+    int times = 0;
+
     public PaintView(Context context) {
         this(context, null);
     }
@@ -96,9 +98,71 @@ public class PaintView extends View {
             super.handleMessage(msg);
             //int x = msg.arg1;
             //int y= msg.arg2;
-            byte[] readBuf = (byte[])msg.obj;
-            String strIncom = new String(readBuf, 0, 7);
-            //mCanvas.drawCircle(x, y, 10, mPaint);
+            //byte[] readBuf = (byte[])msg.obj;
+            //String strIncom = new String(readBuf, 0, 7);
+            String strIncom = (String)msg.obj;
+            //Log.d("VIEW", strIncom);
+            String[] disVals = strIncom.split("\t");
+            if(disVals.length != 3)
+                return;
+            int x = 0, y = 0 , z = 0;
+            try {
+                x = (int) Float.parseFloat(disVals[0]);
+                y = (int) Float.parseFloat(disVals[1]);
+                z = (int) Float.parseFloat(disVals[2]);
+            } catch (Exception e) {
+                Log.d("DEBUG", "Parse Exception");
+            }
+
+            /*
+            mCanvas.drawCircle(x, y, 10, mPaint);
+            //onDraw(mCanvas);
+            invalidate();
+             */
+
+            if(!Calibrated){
+                calibrate(x, y, z);
+                return;
+            }
+
+            /*
+            touchStart(x, y);
+            invalidate();
+            touchMove(x, y + 5);
+            invalidate();
+            touchUp();
+            invalidate();
+
+             */
+
+            if(x == 0 || y == 0 || z ==0)
+                return;
+            Log.d("DRAW", "1");
+            int corx = x - initx;
+            int cory = y - inity;
+            int diffx = x - lastx;
+            int diffy = y - lasty;
+            if(Math.abs(diffx) > 30 || Math.abs(diffy) > 30)
+                return;
+            Log.d("DRAW", "2");
+
+            int drawx = startx + (corx * sensitivity);
+            int drawy = starty + (cory * sensitivity);
+
+
+            touchStart(drawx, drawy);
+            invalidate();
+            touchMove(drawx, drawy + 5);
+            invalidate();
+            touchUp();
+            invalidate();
+
+            Log.d("DRAW", "3");
+
+            lastx = x;
+            lasty = y;
+
+
         }
     };
 
@@ -113,6 +177,43 @@ public class PaintView extends View {
         strokeWidth = BRUSH_SIZE;
         Calibrated = false;
         sensitivity = 3;
+        startx = 830;
+        starty = 430;
+    }
+
+
+
+    public void calibrate(int x, int y, int z){
+        if(times == 0){
+            if(x == 0 || y == 0)
+                return;
+            times += 1;
+            Log.d("CAL", "init");
+            lastx = x;
+            lasty = y;
+            return;
+        }
+
+        if(x == 0 || y ==0)
+            return;
+        if(Math.abs(x - lastx) > 100){
+            times = 0;
+            return;
+        }
+        if(Math.abs(y - lasty) > 100){
+            times = 0;
+            return;
+        }
+        Log.d("CAL", "go");
+        times += 1;
+
+        if(times == 5){
+            Calibrated = true;
+            initx = lastx;
+            inity = lasty;
+            Log.d("CAL", "done");
+            return;
+        }
     }
 
 
@@ -160,7 +261,8 @@ public class PaintView extends View {
             }
         }
         Log.d("New BT", Integer.toString(x));
-        mCanvas.drawCircle(x, y, 10, mPaint);
+
+        //mCanvas.drawCircle(x, y, 10, mPaint);
         /*
         if(x == 0 || y == 0 || z == 0)
             return;
@@ -204,6 +306,7 @@ public class PaintView extends View {
         invalidate();
     }
 
+
     @Override
     protected void onDraw(Canvas canvas) {
         canvas.save();
@@ -227,6 +330,8 @@ public class PaintView extends View {
         canvas.restore();
     }
 
+
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         this.width = w;
@@ -235,6 +340,7 @@ public class PaintView extends View {
         this.starty = h / 4;
         super.onSizeChanged(w, h, oldw, oldh);
     }
+
 
     public void touchStart(float x, float y) {
         mPath = new Path();
@@ -285,4 +391,5 @@ public class PaintView extends View {
 
         return true;
     }
+
 }

@@ -139,19 +139,87 @@ public class MainActivity extends AppCompatActivity {
 
         StringBuffer sbb = new StringBuffer();
 
-        public void run(){
-            byte[] buffer;
+        public String readLine(){
+            byte[] readBuffer = new byte[1024];
             int bytes;
+            int readBufferPosition = 0;
+
+            try{
+                int bytesAvailable = mmInStream.available();
+                if(bytesAvailable > 0)
+                {
+                    byte[] packetBytes = new byte[bytesAvailable];
+                    mmInStream.read(packetBytes);
+                    for(int i=0;i<bytesAvailable;i++)
+                    {
+                        byte b = packetBytes[i];
+                        if(b == 10)
+                        {
+                            byte[] encodedBytes = new byte[readBufferPosition];
+                            System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
+                            final String data = new String(encodedBytes, "US-ASCII");
+                            readBufferPosition = 0;
+                            return data;
+                            //mHandler.obtainMessage(0, data).sendToTarget();
+                        }
+                        else
+                        {
+                            readBuffer[readBufferPosition++] = b;
+                        }
+                    }
+                }
+            } catch(IOException e) {
+                return "fail";
+            }
+            return "fail";
+        }
+
+        public void run(){
+            byte[] readBuffer = new byte[1024];
+            int bytes;
+            int readBufferPosition = 0;
+
+            /*
+            String data;
+            while(true){
+                data = readLine();
+                if(data != "fail")
+                    mHandler.obtainMessage(0, data).sendToTarget();
+            }
+
+             */
+
 
             while(true){
                 try{
-                    buffer = new byte[1024];
-                    bytes = mmInStream.read(buffer);
-                    mHandler.obtainMessage(0, bytes, -1, buffer).sendToTarget();
+                    int bytesAvailable = mmInStream.available();
+                    if(bytesAvailable > 0)
+                    {
+                        byte[] packetBytes = new byte[bytesAvailable];
+                        mmInStream.read(packetBytes);
+                        for(int i=0;i<bytesAvailable;i++)
+                        {
+                            byte b = packetBytes[i];
+                            if(b == 10)
+                            {
+                                byte[] encodedBytes = new byte[readBufferPosition];
+                                System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
+                                final String data = new String(encodedBytes, "US-ASCII");
+                                readBufferPosition = 0;
+                                mHandler.obtainMessage(0, data).sendToTarget();
+                            }
+                            else
+                            {
+                                readBuffer[readBufferPosition++] = b;
+                            }
+                        }
+                    }
                 } catch(IOException e){
                     break;
                 }
             }
+
+
         }
     }
 
