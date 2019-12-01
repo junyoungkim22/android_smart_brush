@@ -67,18 +67,11 @@ public class PaintView extends View {
     private int window;
     private int degree;
 
-    TextView myLabel;
-    EditText myTextbox;
-    BluetoothAdapter mBluetoothAdapter;
-    BluetoothSocket mmSocket;
-    BluetoothDevice mmDevice;
-    OutputStream mmOutputStream;
-    InputStream mmInputStream;
-    Thread workerThread;
-    byte[] readBuffer;
-    int readBufferPosition;
-    int counter;
-    volatile boolean stopWorker;
+    private int currx;
+    private int curry;
+    private final int CIRCLE_COLOR = Color.BLUE;
+    private Paint circle_paint;
+
 
     int times = 0;
 
@@ -97,6 +90,9 @@ public class PaintView extends View {
         mPaint.setStrokeCap(Paint.Cap.ROUND);
         mPaint.setXfermode(null);
         mPaint.setAlpha(0xff);
+
+        circle_paint = new Paint();
+        circle_paint.setColor(CIRCLE_COLOR);
 
         mEmboss = new EmbossMaskFilter(new float[] {1, 1, 1}, 0.4f, 6, 3.5f);
         mBlur = new BlurMaskFilter(5, BlurMaskFilter.Blur.NORMAL);
@@ -163,6 +159,9 @@ public class PaintView extends View {
             int drawx = get_drawx_coord(x);
             int drawy = get_drawy_coord(y);
 
+            currx = drawx;
+            curry = drawy;
+
             drawx_values.add(drawx);
             drawy_values.add(drawy);
 
@@ -217,7 +216,7 @@ public class PaintView extends View {
 
     public int get_drawy_coord(int y){
         int cory = y - inity;
-        return startx + (cory * sensitivity);
+        return starty + (cory * sensitivity);
     }
 
     public int getSmooth(ArrayList<Integer> arr){
@@ -284,8 +283,8 @@ public class PaintView extends View {
             Calibrated = true;
             initx = lastx;
             inity = lasty;
-            last_drawx = initx;
-            last_drawy = inity;
+            last_drawx = startx;
+            last_drawy = starty;
             Log.d("CAL", "done");
             return;
         }
@@ -332,6 +331,7 @@ public class PaintView extends View {
             mCanvas.drawPath(fp.path, mPaint);
 
         }
+        mCanvas.drawCircle(currx, curry, 10, circle_paint);
 
         canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
         canvas.restore();
