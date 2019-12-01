@@ -31,7 +31,7 @@ import java.util.ArrayList;
 public class PaintView extends View {
 
     public static int BRUSH_SIZE = 20;
-    public static final int DEFAULT_COLOR = Color.RED;
+    public static final int DEFAULT_COLOR = Color.BLACK;
     public static final int DEFAULT_BG_COLOR = Color.WHITE;
     private static final float TOUCH_TOLERANCE = 4;
     private float mX, mY;
@@ -149,13 +149,30 @@ public class PaintView extends View {
             int drawx = startx + (corx * sensitivity);
             int drawy = starty + (cory * sensitivity);
 
+            int last_corx = lastx - initx;
+            int last_cory = lasty - inity;
+            int last_drawx = startx + (last_corx * sensitivity);
+            int last_drawy = starty + (last_cory * sensitivity);
 
+            mPath = new Path();
+            FingerPath fp = new FingerPath(currentColor, emboss, blur, strokeWidth, mPath);
+            paths.add(fp);
+
+            mPath.reset();
+            mPath.moveTo(last_drawx, last_drawy);
+
+            mPath.lineTo(drawx, drawy);
+
+            invalidate();
+
+            /*
             touchStart(drawx, drawy);
             invalidate();
             touchMove(drawx, drawy + 5);
             invalidate();
             touchUp();
             invalidate();
+             */
 
             Log.d("DRAW", "3");
 
@@ -165,6 +182,7 @@ public class PaintView extends View {
 
         }
     };
+
 
     public void init(DisplayMetrics metrics) {
         int height = metrics.heightPixels;
@@ -176,12 +194,10 @@ public class PaintView extends View {
         currentColor = DEFAULT_COLOR;
         strokeWidth = BRUSH_SIZE;
         Calibrated = false;
-        sensitivity = 3;
+        sensitivity = 7;
         startx = 830;
         starty = 430;
     }
-
-
 
     public void calibrate(int x, int y, int z){
         if(times == 0){
@@ -214,74 +230,6 @@ public class PaintView extends View {
             Log.d("CAL", "done");
             return;
         }
-    }
-
-
-    public void draw(int x, int y, int z){
-        Log.d("New BT", Integer.toString(x));
-        this.Calibrated = true;
-        if(!this.Calibrated){
-            Log.d("DRAW", "Calibrating...");
-            int disx = 1000;
-            int disy = 1000;
-            int new_disx;
-            int new_disy;
-            int times = 0;
-            while(!this.Calibrated) {
-                if (times == 0) {
-                    disx = x;
-                    disy = y;
-                    if (disx == 0 || disy == 0)
-                        continue;
-                    times += 1;
-                    continue;
-                }
-                new_disx = x;
-                new_disy = y;
-                if(new_disx == 0 || new_disy == 0)
-                    continue;
-                if(Math.abs(new_disx - disx) > 100){
-                    times = 0;
-                    continue;
-                }
-                if(Math.abs(new_disy - disy) > 100){
-                    times = 0;
-                    continue;
-                }
-                times += 1;
-
-                if(times == 5){
-                    this.Calibrated = true;
-                    this.initx = disx;
-                    this.inity = disy;
-                    this.lastx = disx;
-                    this.lasty = disy;
-                    break;
-                }
-            }
-        }
-        Log.d("New BT", Integer.toString(x));
-
-        //mCanvas.drawCircle(x, y, 10, mPaint);
-        /*
-        if(x == 0 || y == 0 || z == 0)
-            return;
-        int corx = x - this.initx;
-        int cory = y - this.inity;
-        int diffx = corx - this.lastx;
-        int diffy = cory - this.lasty;
-
-        if(Math.abs(diffx) > 30 || Math.abs(diffy) > 30)
-            return;
-
-
-        diffy = diffy * (-1);
-
-        int drawx = this.startx + (corx * this.sensitivity);
-        int drawy = this.starty + (cory * this.sensitivity);
-        mCanvas.drawCircle(drawx, drawy, 10, mPaint);
-
-         */
     }
 
     public void normal() {
