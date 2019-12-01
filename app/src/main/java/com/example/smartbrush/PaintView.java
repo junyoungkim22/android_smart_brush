@@ -30,7 +30,7 @@ import java.util.ArrayList;
 
 public class PaintView extends View {
 
-    public static int BRUSH_SIZE = 20;
+    public static int BRUSH_SIZE = 50;
     public static final int DEFAULT_COLOR = Color.BLACK;
     public static final int DEFAULT_BG_COLOR = Color.WHITE;
     private static final float TOUCH_TOLERANCE = 4;
@@ -55,7 +55,17 @@ public class PaintView extends View {
     private int startx, starty;
     private int initx, inity;
     private int lastx, lasty;
+    private int last_drawx, last_drawy;
     private int sensitivity;
+
+    private ArrayList<Integer> drawx_values = new ArrayList<>();
+    private ArrayList<Integer> drawy_values = new ArrayList<>();
+    private ArrayList<Integer> drawz_values = new ArrayList<>();
+
+    private ArrayList<Integer> weights = new ArrayList<>();
+    int weights_sum;
+    private int window;
+    private int degree;
 
     TextView myLabel;
     EditText myTextbox;
@@ -138,21 +148,37 @@ public class PaintView extends View {
             if(x == 0 || y == 0 || z ==0)
                 return;
             Log.d("DRAW", "1");
-            int corx = x - initx;
-            int cory = y - inity;
+            //int corx = x - initx;
+            //int cory = y - inity;
             int diffx = x - lastx;
             int diffy = y - lasty;
-            if(Math.abs(diffx) > 30 || Math.abs(diffy) > 30)
+            if(Math.abs(diffx) > 30 || Math.abs(diffy) > 30) {
+                Log.d("DRAW", strIncom);
                 return;
+            }
             Log.d("DRAW", "2");
 
-            int drawx = startx + (corx * sensitivity);
-            int drawy = starty + (cory * sensitivity);
+            //int drawx = startx + (corx * sensitivity);
+            //int drawy = starty + (cory * sensitivity);
+            int drawx = get_drawx_coord(x);
+            int drawy = get_drawy_coord(y);
 
+            drawx_values.add(drawx);
+            drawy_values.add(drawy);
+
+            if(drawx_values.size() < window)
+                return;
+
+            /*
             int last_corx = lastx - initx;
             int last_cory = lasty - inity;
             int last_drawx = startx + (last_corx * sensitivity);
             int last_drawy = starty + (last_cory * sensitivity);
+             */
+            //int last_drawx = get_drawx_coord(lastx);
+            //int last_drawy = get_drawy_coord(lasty);
+            drawx = getSmooth(drawx_values);
+            drawy = getSmooth(drawy_values);
 
             mPath = new Path();
             FingerPath fp = new FingerPath(currentColor, emboss, blur, strokeWidth, mPath);
@@ -178,10 +204,31 @@ public class PaintView extends View {
 
             lastx = x;
             lasty = y;
-
+            last_drawx = drawx;
+            last_drawy = drawy;
 
         }
     };
+
+    public int get_drawx_coord(int x){
+        int corx = x - initx;
+        return startx + (corx * sensitivity);
+    }
+
+    public int get_drawy_coord(int y){
+        int cory = y - inity;
+        return startx + (cory * sensitivity);
+    }
+
+    public int getSmooth(ArrayList<Integer> arr){
+        int last = arr.size() - 1;
+        float sum = 0;
+        for(int i = 0; i < window; i++){
+            sum += weights.get(i) * arr.get(arr.size() - window + i);
+        }
+        sum /= weights_sum;
+        return (int) sum;
+    }
 
 
     public void init(DisplayMetrics metrics) {
@@ -197,6 +244,16 @@ public class PaintView extends View {
         sensitivity = 7;
         startx = 830;
         starty = 430;
+
+        degree = 3;
+        window = degree*2 - 1;
+        for(int i = 1; i < 2*degree; i++){
+            weights.add(degree - Math.abs(degree - i));
+        }
+        weights_sum = 0;
+        for(int i = 0; i < weights.size(); i++){
+            weights_sum += weights.get(i);
+        }
     }
 
     public void calibrate(int x, int y, int z){
@@ -227,6 +284,8 @@ public class PaintView extends View {
             Calibrated = true;
             initx = lastx;
             inity = lasty;
+            last_drawx = initx;
+            last_drawy = inity;
             Log.d("CAL", "done");
             return;
         }
