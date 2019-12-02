@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch(item.getItemId()) {
+            /*
             case R.id.normal:
                 paintView.normal();
                 return true;
@@ -63,6 +64,10 @@ public class MainActivity extends AppCompatActivity {
             case R.id.blur:
                 paintView.blur();
                 return true;
+             */
+            case R.id.capture:
+                Intent intent = new Intent(this, ShootAndCropActivity.class);
+                startActivity(intent);
             case R.id.clear:
                 paintView.clear();
                 return true;
