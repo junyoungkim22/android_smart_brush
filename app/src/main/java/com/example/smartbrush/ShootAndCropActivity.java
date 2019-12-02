@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -79,12 +80,32 @@ public class ShootAndCropActivity extends AppCompatActivity implements OnClickLi
                 Bundle extras = data.getExtras();
                 //get the cropped bitmap
                 Bitmap thePic = extras.getParcelable("data");
+                getContrastBitmap(thePic);
                 //retrieve a reference to the ImageView
                 ImageView picView = (ImageView)findViewById(R.id.picture);
                 //display the returned cropped image
                 picView.setImageBitmap(thePic);
             }
         }
+    }
+
+    public void getContrastBitmap(Bitmap src){
+        int[] pixels = new int[src.getWidth()*src.getHeight()];
+        src.getPixels(pixels, 0, src.getWidth(), 0 , 0, src.getWidth(), src.getHeight());
+        for(int i = 0; i < pixels.length; i++){
+            int color = pixels[i];
+            int r = Color.red(color);
+            int g = Color.green(color);
+            int b = Color.blue(color);
+            double luminance = (0.299*r+0.0f + 0.587*g+0.0f + 0.114*b+0.0f);
+            if(luminance < 150){
+                pixels[i] = Color.BLACK;
+            }
+            else {
+                pixels[i] = Color.WHITE;
+            }
+        }
+        src.setPixels(pixels, 0, src.getWidth(), 0, 0, src.getWidth(), src.getHeight());
     }
 
     private void performCrop(){
