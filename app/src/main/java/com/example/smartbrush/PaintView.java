@@ -53,14 +53,17 @@ public class PaintView extends View {
     private boolean Calibrated;
     private int x, y;
     private int startx, starty;
-    private int initx, inity;
-    private int lastx, lasty;
+    private int initx, inity, initz;
+    private int lastx, lasty, lastz;
     private int last_drawx, last_drawy;
     private int sensitivity;
 
     private ArrayList<Integer> drawx_values = new ArrayList<>();
     private ArrayList<Integer> drawy_values = new ArrayList<>();
     private ArrayList<Integer> drawz_values = new ArrayList<>();
+
+    private final int MAX_WIDTH = 100;
+    private final int BRUSH_HEIGHT = 50;
 
     private ArrayList<Integer> weights = new ArrayList<>();
     int weights_sum;
@@ -164,6 +167,7 @@ public class PaintView extends View {
 
             drawx_values.add(drawx);
             drawy_values.add(drawy);
+            drawz_values.add(z);
 
             if(drawx_values.size() < window)
                 return;
@@ -179,14 +183,21 @@ public class PaintView extends View {
             drawx = getSmooth(drawx_values);
             drawy = getSmooth(drawy_values);
 
-            mPath = new Path();
-            FingerPath fp = new FingerPath(currentColor, emboss, blur, strokeWidth, mPath);
-            paths.add(fp);
+            int drawz = getSmooth(drawz_values);
+            if(drawz < initz) {
+                int width = getWidth(drawz);
+                Log.d("WIDTH", Integer.toString(width));
 
-            mPath.reset();
-            mPath.moveTo(last_drawx, last_drawy);
+                mPath = new Path();
+                //FingerPath fp = new FingerPath(currentColor, emboss, blur, strokeWidth, mPath);
+                FingerPath fp = new FingerPath(currentColor, emboss, blur, width, mPath);
+                paths.add(fp);
 
-            mPath.lineTo(drawx, drawy);
+                mPath.reset();
+                mPath.moveTo(last_drawx, last_drawy);
+
+                mPath.lineTo(drawx, drawy);
+            }
 
             invalidate();
 
@@ -208,6 +219,14 @@ public class PaintView extends View {
 
         }
     };
+
+    public int getWidth(int z){
+        if(initz - z > BRUSH_HEIGHT){
+            return MAX_WIDTH;
+        }
+        float ratio = (float)(initz - z) / 50;
+        return (int) (ratio * MAX_WIDTH);
+    }
 
     public int get_drawx_coord(int x){
         int corx = x - initx;
@@ -263,16 +282,21 @@ public class PaintView extends View {
             Log.d("CAL", "init");
             lastx = x;
             lasty = y;
+            lastz = z;
             return;
         }
 
-        if(x == 0 || y ==0)
+        if(x == 0 || y ==0 || z == 0)
             return;
         if(Math.abs(x - lastx) > 100){
             times = 0;
             return;
         }
         if(Math.abs(y - lasty) > 100){
+            times = 0;
+            return;
+        }
+        if(Math.abs(z - lastz) > 100){
             times = 0;
             return;
         }
@@ -283,6 +307,7 @@ public class PaintView extends View {
             Calibrated = true;
             initx = lastx;
             inity = lasty;
+            initz = lastz;
             last_drawx = startx;
             last_drawy = starty;
             Log.d("CAL", "done");
