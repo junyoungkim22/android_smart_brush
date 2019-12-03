@@ -12,6 +12,8 @@ import android.graphics.EmbossMaskFilter;
 import android.graphics.MaskFilter;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
@@ -74,6 +76,9 @@ public class PaintView extends View {
     private int curry;
     private final int CIRCLE_COLOR = Color.BLUE;
     private Paint circle_paint;
+
+    public Bitmap target;
+    private Paint target_paint = new Paint();
 
 
     int times = 0;
@@ -253,6 +258,7 @@ public class PaintView extends View {
         int height = metrics.heightPixels;
         int width = metrics.widthPixels;
 
+
         mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         mCanvas = new Canvas(mBitmap);
 
@@ -272,6 +278,66 @@ public class PaintView extends View {
         for(int i = 0; i < weights.size(); i++){
             weights_sum += weights.get(i);
         }
+
+        target = null;
+        target_paint.setColor(Color.GRAY);
+    }
+
+    public class Coord {
+        public int x;
+        public int y;
+        Coord(int x, int y){
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    private ArrayList<Coord> target_coords = new ArrayList<>();
+
+    public void setTarget(Bitmap target){
+        this.target = target;
+        int[] pixels = new int[target.getHeight() * target.getWidth()];
+        target.getPixels(pixels, 0, target.getWidth(), 0, 0, target.getWidth(), target.getHeight());
+        for(int y = 0; y < target.getHeight(); y++){
+            for(int x = 0; x < target.getWidth(); x++){
+                int pixel = pixels[x + y * target.getWidth()];
+                if(pixel == Color.BLACK){
+                    Coord new_coord = new Coord(x, y);
+                    target_coords.add(new_coord);
+                }
+            }
+        }
+    }
+
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        canvas.save();
+        mCanvas.drawColor(backgroundColor);
+
+        for(Coord coord : target_coords){
+            mCanvas.drawPoint(coord.x, coord.y, target_paint);
+        }
+
+        for (FingerPath fp : paths) {
+            mPaint.setColor(fp.color);
+            mPaint.setStrokeWidth(fp.strokeWidth);
+            mPaint.setMaskFilter(null);
+
+            if (fp.emboss)
+                mPaint.setMaskFilter(mEmboss);
+            else if (fp.blur)
+                mPaint.setMaskFilter(mBlur);
+
+            mCanvas.drawPath(fp.path, mPaint);
+
+        }
+        mCanvas.drawCircle(currx, curry, 10, circle_paint);
+
+        canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
+
+
+        canvas.restore();
     }
 
     public void calibrate(int x, int y, int z){
@@ -320,15 +386,6 @@ public class PaintView extends View {
         blur = false;
     }
 
-    public void emboss() {
-        emboss = true;
-        blur = false;
-    }
-
-    public void blur() {
-        emboss = false;
-        blur = true;
-    }
 
     public void clear() {
         backgroundColor = DEFAULT_BG_COLOR;
@@ -336,32 +393,6 @@ public class PaintView extends View {
         normal();
         invalidate();
     }
-
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        canvas.save();
-        mCanvas.drawColor(backgroundColor);
-
-        for (FingerPath fp : paths) {
-            mPaint.setColor(fp.color);
-            mPaint.setStrokeWidth(fp.strokeWidth);
-            mPaint.setMaskFilter(null);
-
-            if (fp.emboss)
-                mPaint.setMaskFilter(mEmboss);
-            else if (fp.blur)
-                mPaint.setMaskFilter(mBlur);
-
-            mCanvas.drawPath(fp.path, mPaint);
-
-        }
-        mCanvas.drawCircle(currx, curry, 10, circle_paint);
-
-        canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
-        canvas.restore();
-    }
-
 
 
     @Override

@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 //import android.support.v7.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatActivity;
@@ -42,6 +43,13 @@ public class MainActivity extends AppCompatActivity {
         paintView.touchStart(1120, 730);
         paintView.touchMove(1120, 450);
          */
+        Bundle extras = getIntent().getExtras();
+        if(extras != null){
+            Bitmap target = (Bitmap) getIntent().getParcelableExtra("image");
+            target = Bitmap.createScaledBitmap(target, metrics.heightPixels, metrics.heightPixels, true);
+            //paintView.target = target;
+            paintView.setTarget(target);
+        }
     }
 
     @Override

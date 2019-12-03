@@ -16,6 +16,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import javax.crypto.Mac;
+
 public class ShootAndCropActivity extends AppCompatActivity implements OnClickListener {
     //keep track of camera capture intent
     final int CAMERA_CAPTURE = 1;
@@ -25,6 +27,8 @@ public class ShootAndCropActivity extends AppCompatActivity implements OnClickLi
 
     //keep track of cropping intent
     final int PIC_CROP = 3;
+
+    Bitmap thePic;
 
 
     @Override
@@ -39,6 +43,9 @@ public class ShootAndCropActivity extends AppCompatActivity implements OnClickLi
 
         Button chooseBtn = (Button)findViewById(R.id.choose_btn);
         chooseBtn.setOnClickListener(this);
+
+        Button drawBtn = (Button)findViewById(R.id.go_draw_btn);
+        drawBtn.setOnClickListener(this);
     }
 
     public void onClick(View v) {
@@ -67,6 +74,17 @@ public class ShootAndCropActivity extends AppCompatActivity implements OnClickLi
                 toast.show();
             }
         }
+        else if(v.getId() == R.id.go_draw_btn){
+            try {
+                Intent intent = new Intent(this, MainActivity.class);
+                intent.putExtra("image", thePic);
+                startActivity(intent);
+            } catch (Exception e){
+                String errorMessage = "Whoops - something went wrong in pass image";
+                Toast toast = Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT);
+                toast.show();
+            }
+        }
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -79,7 +97,7 @@ public class ShootAndCropActivity extends AppCompatActivity implements OnClickLi
                 //get the returned data
                 Bundle extras = data.getExtras();
                 //get the cropped bitmap
-                Bitmap thePic = extras.getParcelable("data");
+                thePic = extras.getParcelable("data");
                 getContrastBitmap(thePic);
                 //retrieve a reference to the ImageView
                 ImageView picView = (ImageView)findViewById(R.id.picture);
