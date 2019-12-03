@@ -281,6 +281,7 @@ public class PaintView extends View {
 
         target = null;
         target_paint.setColor(Color.GRAY);
+        target_paint.setAlpha(60);
     }
 
     public class Coord {
@@ -315,8 +316,15 @@ public class PaintView extends View {
         canvas.save();
         mCanvas.drawColor(backgroundColor);
 
+        /*
         for(Coord coord : target_coords){
             mCanvas.drawPoint(coord.x, coord.y, target_paint);
+        }
+         */
+        canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
+
+        if(target != null) {
+            canvas.drawBitmap(target, 700, 100, target_paint);
         }
 
         for (FingerPath fp : paths) {
@@ -334,7 +342,7 @@ public class PaintView extends View {
         }
         mCanvas.drawCircle(currx, curry, 10, circle_paint);
 
-        canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
+        //canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
 
 
         canvas.restore();

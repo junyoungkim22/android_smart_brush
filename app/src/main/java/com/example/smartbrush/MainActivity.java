@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
         Bundle extras = getIntent().getExtras();
         if(extras != null){
             Bitmap target = (Bitmap) getIntent().getParcelableExtra("image");
-            target = Bitmap.createScaledBitmap(target, metrics.heightPixels, metrics.heightPixels, true);
+            target = Bitmap.createScaledBitmap(target, metrics.heightPixels - 500, metrics.heightPixels - 500, true);
             //paintView.target = target;
             paintView.setTarget(target);
         }
