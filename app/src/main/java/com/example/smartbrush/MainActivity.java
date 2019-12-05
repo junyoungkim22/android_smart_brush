@@ -45,10 +45,17 @@ public class MainActivity extends AppCompatActivity {
          */
         Bundle extras = getIntent().getExtras();
         if(extras != null){
-            Bitmap target = (Bitmap) getIntent().getParcelableExtra("image");
-            target = Bitmap.createScaledBitmap(target, metrics.heightPixels - 500, metrics.heightPixels - 500, true);
-            //paintView.target = target;
-            paintView.setTarget(target);
+            try{
+                Bitmap target = (Bitmap) getIntent().getParcelableExtra("image");
+                if (target == null) {
+                    return;
+                }
+                target = Bitmap.createScaledBitmap(target, metrics.heightPixels - 500, metrics.heightPixels - 500, true);
+                //paintView.target = target;
+                paintView.setTarget(target);
+            } catch(NullPointerException e){
+                return;
+            }
         }
     }
 
@@ -80,8 +87,13 @@ public class MainActivity extends AppCompatActivity {
                 paintView.clear();
                 return true;
             case R.id.find:
-                startBT();
+                if(!paintView.Calibrated)
+                    startBT();
+                else
+                    paintView.Calibrated = false;
                 return true;
+            case R.id.feedback:
+                paintView.getFeedback();
         }
 
         return super.onOptionsItemSelected(item);

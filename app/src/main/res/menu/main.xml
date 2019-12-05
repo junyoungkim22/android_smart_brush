@@ -17,5 +17,10 @@
         app:showAsAction="never"
         android:title="Find Brush" />
 
+    <item
+        android:id="@+id/feedback"
+        app:showAsAction="never"
+        android:title="Show Feedback" />
+
 
 </menu>

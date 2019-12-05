@@ -52,7 +52,7 @@ public class PaintView extends View {
     private Paint mBitmapPaint = new Paint(Paint.DITHER_FLAG);
 
     private int width, height;
-    private boolean Calibrated;
+    public boolean Calibrated;
     private int x, y;
     private int startx, starty;
     private int initx, inity, initz;
@@ -80,6 +80,10 @@ public class PaintView extends View {
     public Bitmap target;
     private Paint target_paint = new Paint();
 
+    private Bitmap dBitmap;
+
+    private boolean showFeedback;
+
 
     int times = 0;
 
@@ -104,6 +108,7 @@ public class PaintView extends View {
 
         mEmboss = new EmbossMaskFilter(new float[] {1, 1, 1}, 0.4f, 6, 3.5f);
         mBlur = new BlurMaskFilter(5, BlurMaskFilter.Blur.NORMAL);
+        this.setDrawingCacheEnabled(true);
     }
 
     public Handler mHandler = new Handler(){
@@ -258,15 +263,20 @@ public class PaintView extends View {
         int height = metrics.heightPixels;
         int width = metrics.widthPixels;
 
+        this.width = width;
+        this.height = height;
+
 
         mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         mCanvas = new Canvas(mBitmap);
+
+        dBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
         currentColor = DEFAULT_COLOR;
         strokeWidth = BRUSH_SIZE;
         Calibrated = false;
         sensitivity = 7;
-        startx = 830;
+        startx = 1000;
         starty = 430;
 
         degree = 3;
@@ -281,7 +291,9 @@ public class PaintView extends View {
 
         target = null;
         target_paint.setColor(Color.GRAY);
-        target_paint.setAlpha(60);
+        target_paint.setAlpha(50);
+
+        showFeedback = false;
     }
 
     public class Coord {
@@ -310,6 +322,15 @@ public class PaintView extends View {
         }
     }
 
+    public boolean inTarget(int x, int y){
+        for(Coord coord : target_coords){
+            if(coord.x == x && coord.y == y){
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -324,11 +345,23 @@ public class PaintView extends View {
         canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
 
         if(target != null) {
+            if(showFeedback){
+                target_paint.setAlpha(200);
+            }
+            else{
+                target_paint.setAlpha(50);
+            }
             canvas.drawBitmap(target, 700, 100, target_paint);
         }
 
         for (FingerPath fp : paths) {
-            mPaint.setColor(fp.color);
+            if(showFeedback){
+                mPaint.setColor(Color.RED);
+                //mPaint.setColor(Color.BLACK);
+            }
+            else {
+                mPaint.setColor(Color.BLACK);
+            }
             mPaint.setStrokeWidth(fp.strokeWidth);
             mPaint.setMaskFilter(null);
 
@@ -342,10 +375,22 @@ public class PaintView extends View {
         }
         mCanvas.drawCircle(currx, curry, 10, circle_paint);
 
-        //canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
-
 
         canvas.restore();
+    }
+
+    public void getFeedback(){
+        if(showFeedback){
+            showFeedback = false;
+            invalidate();
+            return;
+        }
+        else {
+
+            showFeedback = true;
+            invalidate();
+            return;
+        }
     }
 
     public void calibrate(int x, int y, int z){
